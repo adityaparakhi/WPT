@@ -1,0 +1,426 @@
+=============================
+Workbench
+=============================
+CREATE DATABASE employee_auth;
+
+USE employee_auth;
+
+-- Table to store users
+CREATE TABLE users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(100),
+  email VARCHAR(100),
+  password VARCHAR(255)
+);
+
+-- Table to store employees
+CREATE TABLE employees (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100),
+  department VARCHAR(100),
+  salary DECIMAL(10,2)
+);
+
+
+
+
+
+==============================
+📦 PACKAGE INSTALLATION (BACKEND)
+==============================
+cd backend
+npm init -y
+npm install express mysql2 cors bcrypt jsonwebtoken
+
+
+==============================
+📦 PACKAGE INSTALLATION (FRONTEND)
+==============================
+npx create-react-app .
+npm install axios react-router-dom bootstrap
+
+
+==============================
+📁 FOLDER STRUCTURE
+==============================
+
+ProjectFolder/
+├── backend/
+│   ├── server.js
+│   ├── db.js
+│   ├── .env
+│   └── package.json
+└── frontend/
+    ├── src/
+    │   ├── components/
+    │   │   ├── Register.jsx
+    │   │   ├── Login.jsx
+    │   │   └── StudentList.jsx
+    │   ├── App.js
+    │   ├── index.js
+    └── package.json
+
+
+
+
+==============================
+🖥️ BACKEND: server.js
+==============================
+const express = require("express");
+const cors = require("cors");
+const mysql = require("mysql2");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+
+const app = express();
+const PORT = 5000;
+const SECRET = "jwt-secret-key";
+
+app.use(cors());
+app.use(express.json());
+
+// MySQL DB connection
+const db = mysql.createConnection({
+  host: "localhost",
+  user: "root",
+  password: "", // change if needed
+  database: "employee_auth"
+});
+
+db.connect(err => {
+  if (err) throw err;
+  console.log("MySQL Connected");
+});
+
+// Register
+app.post("/register", async (req, res) => {
+  const { username, email, password } = req.body;
+  const hashedPassword = await bcrypt.hash(password, 10);
+  db.query(
+    "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
+    [username, email, hashedPassword],
+    (err, result) => {
+      if (err) return res.status(500).json({ error: err });
+      res.json({ message: "User registered" });
+    }
+  );
+});
+
+// Login
+app.post("/login", (req, res) => {
+  const { username, password } = req.body;
+  db.query("SELECT * FROM users WHERE username = ?", [username], async (err, result) => {
+    if (err) return res.status(500).json({ error: err });
+    if (result.length === 0) return res.status(404).json({ message: "User not found" });
+
+    const isMatch = await bcrypt.compare(password, result[0].password);
+    if (!isMatch) return res.status(401).json({ message: "Incorrect password" });
+
+    const token = jwt.sign({ userId: result[0].id }, SECRET, { expiresIn: "1h" });
+    res.json({ token });
+  });
+});
+
+// JWT Middleware
+function verifyToken(req, res, next) {
+  const bearer = req.headers["authorization"];
+  if (!bearer) return res.status(403).json({ message: "Token required" });
+
+  const token = bearer.split(" ")[1];
+  jwt.verify(token, SECRET, (err, data) => {
+    if (err) return res.status(403).json({ message: "Invalid token" });
+    req.user = data;
+    next();
+  });
+}
+
+// Get all employees (Protected)
+app.get("/employees", verifyToken, (req, res) => {
+  db.query("SELECT * FROM employees", (err, result) => {
+    if (err) return res.status(500).json({ error: err });
+    res.json(result);
+  });
+});
+
+// Delete employee by ID (Protected)
+app.delete("/employees/:id", verifyToken, (req, res) => {
+  db.query("DELETE FROM employees WHERE id = ?", [req.params.id], (err) => {
+    if (err) return res.status(500).json({ error: err });
+    res.json({ message: "Employee deleted" });
+  });
+});
+
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+
+
+
+
+
+==============================
+frontend index.js
+==============================
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+import 'bootstrap/dist/css/bootstrap.min.css';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+
+
+
+==============================
+Frontend App.js
+==============================
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Register from './pages/Register';
+import Login from './pages/Login';
+import Employees from './pages/Employees';
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/employees" element={<Employees />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;
+
+
+
+
+
+==============================
+🧑 FRONTEND: src/pages/Register.jsx
+==============================
+import React, { useState } from 'react';
+import axios from 'axios';
+
+function Register() {
+  const [form, setForm] = useState({ username: '', email: '', password: '' });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.username || !form.email || !form.password) return alert("All fields required!");
+    if (!form.email.includes("@")) return alert("Invalid email!");
+    if (form.password.length < 6) return alert("Password must be 6+ characters");
+
+    try {
+      await axios.post("http://localhost:5000/register", form);
+      alert("Registered!");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  return (
+    <div className="container mt-5">
+      <h2>Register</h2>
+      <form onSubmit={handleSubmit}>
+        <input className="form-control mb-2" placeholder="Username" onChange={e => setForm({ ...form, username: e.target.value })} />
+        <input className="form-control mb-2" placeholder="Email" onChange={e => setForm({ ...form, email: e.target.value })} />
+        <input className="form-control mb-2" type="password" placeholder="Password" onChange={e => setForm({ ...form, password: e.target.value })} />
+        <button className="btn btn-primary">Register</button>
+      </form>
+    </div>
+  );
+}
+
+export default Register;
+
+
+
+
+==============================
+🧑 FRONTEND: src/pages/Login.jsx
+==============================
+import React, { useState } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+
+function Login() {
+  const [form, setForm] = useState({ username: '', password: '' });
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await axios.post("http://localhost:5000/login", form);
+      localStorage.setItem("token", res.data.token);
+      navigate("/employees");
+    } catch (err) {
+      alert("Login failed!");
+    }
+  };
+
+  return (
+    <div className="container mt-5">
+      <h2>Login</h2>
+      <form onSubmit={handleSubmit}>
+        <input className="form-control mb-2" placeholder="Username" onChange={e => setForm({ ...form, username: e.target.value })} />
+        <input className="form-control mb-2" type="password" placeholder="Password" onChange={e => setForm({ ...form, password: e.target.value })} />
+        <button className="btn btn-success">Login</button>
+      </form>
+    </div>
+  );
+}
+
+export default Login;
+
+
+
+
+
+==============================
+🧑 FRONTEND: src/pages/Employee.jsx
+==============================
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+
+function Employees() {
+  const [employees, setEmployees] = useState([]);
+
+  const fetchEmployees = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/employees", {
+        headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      });
+      setEmployees(res.data);
+    } catch (err) {
+      alert("Unauthorized or error fetching employees");
+    }
+  };
+
+  const deleteEmployee = async (id) => {
+    if (!window.confirm("Delete employee?")) return;
+    try {
+      await axios.delete(`http://localhost:5000/employees/${id}`, {
+        headers: { Authorization: "Bearer " + localStorage.getItem("token") }
+      });
+      fetchEmployees();
+    } catch (err) {
+      alert("Error deleting employee");
+    }
+  };
+
+  useEffect(() => { fetchEmployees(); }, []);
+
+  return (
+    <div className="container mt-5">
+      <h2>Employees</h2>
+      <table className="table table-bordered table-striped">
+        <thead className="table-dark">
+          <tr>
+            <th>ID</th><th>Name</th><th>Department</th><th>Salary</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {employees.map(emp => (
+            <tr key={emp.id}>
+              <td>{emp.id}</td>
+              <td>{emp.name}</td>
+              <td>{emp.department}</td>
+              <td>₹{emp.salary}</td>
+              <td><button onClick={() => deleteEmployee(emp.id)} className="btn btn-danger btn-sm">Delete</button></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export default Employees;
+
+
+
+
+==============================
+📬 POSTMAN USAGE
+==============================
+
+🔐 Register
+Method: POST
+
+URL: http://localhost:5000/register
+
+Body:
+
+json
+Copy
+Edit
+{
+  "username": "admin",
+  "email": "admin@gmail.com",
+  "password": "admin123"
+}
+
+
+🔐 2. Login to Get JWT Token
+➤ Method: POST
+URL: http://localhost:5000/login
+
+🔽 Body → raw → JSON:
+json
+Copy
+Edit
+{
+  "username": "admin",
+  "password": "admin123"
+}
+✅ Expected Response:
+json
+Copy
+Edit
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR..."
+}
+🔐 Copy this token – You’ll need it for the protected routes.
+
+✅ 3. Fetch All Employees (Protected)
+➤ Method: GET
+URL: http://localhost:5000/employees
+
+🔐 Authorization → Bearer Token
+Choose Bearer Token and paste the token you got from login.
+
+✅ Expected Response:
+json
+Copy
+Edit
+[
+  {
+    "id": 1,
+    "name": "Alice",
+    "department": "HR",
+    "salary": 40000
+  },
+  {
+    "id": 2,
+    "name": "Bob",
+    "department": "Sales",
+    "salary": 50000
+  }
+]
+✅ 4. Delete an Employee (Protected)
+➤ Method: DELETE
+URL: http://localhost:5000/employees/2
+(Replace 2 with the ID of the employee you want to delete.)
+
+🔐 Authorization → Bearer Token
+Same token as in the GET call.
+
+✅ Expected Response:
+json
+Copy
+Edit
+{
+  "message": "Employee deleted"
+}
