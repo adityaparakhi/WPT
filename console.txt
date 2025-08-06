@@ -1,0 +1,277 @@
+Write a Node.js program that prints all numbers from 1 to 100, each on a new line.
+Apply the following conditions:
+• If the number is divisible by 3, print "foo"
+• If the number is divisible by 5, print "bar"
+• If the number is divisible by both 3 and 5, print "foobar"
+->
+
+// foobar.js
+
+for (let i = 1; i <= 100; i++) {
+  if (i % 3 === 0 && i % 5 === 0) {
+    console.log("foobar");
+  } else if (i % 3 === 0) {
+    console.log("foo");
+  } else if (i % 5 === 0) {
+    console.log("bar");
+  } else {
+    console.log(i);
+  }
+}
+
+// Print summary
+console.log("\nSummary:");
+console.log("foo printed:", fooCount, "times");
+console.log("bar printed:", barCount, "times");
+console.log("foobar printed:", foobarCount, "times");
+
+============================================================
+
+Q: Print numbers from 1 to 50.
+If divisible by 4, print "quad"
+If divisible by 6, print "hex"
+If divisible by both 4 and 6, print "quadhex"
+->
+
+for (let i = 1; i <= 50; i++) {
+  if (i % 4 === 0 && i % 6 === 0) {
+    console.log("quadhex");
+  } else if (i % 4 === 0) {
+    console.log("quad");
+  } else if (i % 6 === 0) {
+    console.log("hex");
+  } else {
+    console.log(i);
+  }
+}
+
+===================================================================
+
+Q: Write a Node.js program to accept a number N and count:
+Total even numbers
+Total odd numbers
+Total prime numbers from 1 to N
+->
+
+let N = 50; // You can change the value of N
+let even = 0, odd = 0, prime = 0;
+
+function isPrime(num) {
+  if (num < 2) return false;
+  for (let i = 2; i <= Math.sqrt(num); i++) {
+    if (num % i === 0) return false;
+  }
+  return true;
+}
+
+for (let i = 1; i <= N; i++) {
+  if (i % 2 === 0) even++;
+  else odd++;
+
+  if (isPrime(i)) prime++;
+}
+
+console.log("Even:", even);
+console.log("Odd:", odd);
+console.log("Prime:", prime);
+
+=============================================================
+
+Q: Print the sum of all even numbers and odd numbers separately from 1 to 100.
+->
+let evenSum = 0;
+let oddSum = 0;
+
+for (let i = 1; i <= 100; i++) {
+  if (i % 2 === 0) {
+    evenSum += i;
+  } else {
+    oddSum += i;
+  }
+}
+
+console.log("Even Sum:", evenSum);
+console.log("Odd Sum:", oddSum);
+
+==============================================================
+
+Q: Check if the given string is a palindrome.
+->
+let str = "madam";
+let reversed = str.split("").reverse().join("");
+
+if (str === reversed) {
+  console.log("Palindrome");
+} else {
+  console.log("Not a palindrome");
+}
+
+==============================================================
+
+Q: Print the first 10 numbers of the Fibonacci series.
+->
+let n = 10;
+let a = 0, b = 1;
+
+console.log(a);
+console.log(b);
+
+for (let i = 3; i <= n; i++) {
+  let c = a + b;
+  console.log(c);
+  a = b;
+  b = c;
+}
+console.log("Total Sum:", sum);
+
+==============================================================
+
+Q: Find the factorial of a given number (e.g., 5)
+->
+
+let num = 5;
+let fact = 1;
+
+for (let i = 1; i <= num; i++) {
+  fact *= i;
+}
+
+console.log("Factorial of", num, "is", fact);
+
+==============================================================
+
+Q: Print the multiplication table of 7
+->
+
+let num = 7;
+
+for (let i = 1; i <= 10; i++) {
+  console.log(`${num} x ${i} = ${num * i}`);
+}
+
+==============================================================
+
+Q: Count the number of vowels in a string.
+->
+
+let str = "Web Programming Lab";
+let count = 0;
+let vowels = "aeiou";
+
+for (let ch of str.toLowerCase()) {
+  if (vowels.includes(ch)) {
+    count++;
+  }
+}
+
+console.log("Vowels:", vowelCount);
+console.log("Consonants:", consonantCount);
+console.log("Spaces:", spaceCount);
+
+==================================================================
+
+Q:  Check if a number is prime (e.g., 17)
+->
+
+let num = 17;
+let isPrime = true;
+
+if (num <= 1) isPrime = false;
+for (let i = 2; i < num; i++) {
+  if (num % i === 0) {
+    isPrime = false;
+    break;
+  }
+}
+
+console.log(isPrime ? "Prime" : "Not Prime");
+
+==================================================================
+
+Q: Reverse a given number (e.g., 123 → 321)
+->
+let num = 123;
+let reversed = 0;
+
+while (num > 0) {
+  reversed = reversed * 10 + (num % 10);
+  num = Math.floor(num / 10);
+}
+
+console.log("Reversed number:", reversed);
+
+to check reversed number is palindrome
+console.log(reverse === original ? "Palindrome" : "Not a Palindrome");
+
+========================================================================
+
+Q: Check if a 3-digit number is an Armstrong number (e.g., 153)
+->
+let num = 153;
+let sum = 0;
+let temp = num;
+
+while (temp > 0) {
+  let digit = temp % 10;
+  sum += digit ** 3;
+  temp = Math.floor(temp / 10);
+}
+
+console.log(sum === num ? "Armstrong" : "Not Armstrong");
+
+========================================================================
+Q: Write a Node.js program to:
+Accept a number
+Check if it is an Armstrong number
+Count the number of digits
+->
+
+let num = 9474;
+let original = num;
+let sum = 0;
+let digitCount = 0;
+
+// Count digits
+let temp = num;
+while (temp > 0) {
+  digitCount++;
+  temp = Math.floor(temp / 10);
+}
+
+// Check Armstrong
+temp = num;
+while (temp > 0) {
+  let digit = temp % 10;
+  sum += digit ** digitCount;
+  temp = Math.floor(temp / 10);
+}
+
+console.log("Digits:", digitCount);
+console.log(sum === original ? "Armstrong Number" : "Not Armstrong");
+
+========================================================================
+
+Q: Write a Node.js program to accept an array of 10 numbers and print:
+Minimum
+Maximum
+Average
+->
+let arr = [15, 22, 5, 39, 8, 41, 16, 7, 30, 12];
+let min = arr[0], max = arr[0], sum = 0;
+
+for (let num of arr) {
+  if (num < min) min = num;
+  if (num > max) max = num;
+  sum += num;
+}
+
+let average = sum / arr.length;
+
+console.log("Minimum:", min);
+console.log("Maximum:", max);
+console.log("Average:", average.toFixed(2));
+
+
+
+
+
