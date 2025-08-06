@@ -1,0 +1,313 @@
+-----Student Record Management System---------
+
+
+Frontend->
+
+Commands for terminal
+npx create-react-app student-crud-frontend
+cd student-crud-frontend
+npm install axios bootstrap react-router-dom
+
+
+Add this inside index.js frontend
+import 'bootstrap/dist/css/bootstrap.min.css';
+
+
+Make components inside src and add following
+->
+StudentForm.js
+->
+import React, { useState } from "react";
+import axios from "axios";
+
+const StudentForm = () => {
+  const [student, setStudent] = useState({
+    name: "",
+    email: "",
+    course: "",
+    address: "",
+    mobile: "",
+    dob: "",
+  });
+
+  const handleChange = (e) => {
+    setStudent({ ...student, [e.target.name]: e.target.value });
+  };
+
+  const validateForm = () => {
+    const { name, email, course, address, mobile, dob } = student;
+    if (!name || name.length < 3 || !/^[A-Za-z\s]+$/.test(name)) return false;
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) return false;
+    if (!course) return false;
+    if (!address || !/^[A-Za-z0-9\s,.-]{5,}$/.test(address)) return false;
+    if (!mobile || mobile.length < 10) return false;
+    if (!dob) return false;
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) {
+      alert("Invalid Form Data");
+      return;
+    }
+    try {
+      await axios.post("http://localhost:3001/students", student);
+      alert("Student Added");
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  return (
+    <div className="container mt-4">
+      <h3>Add Student</h3>
+      <div className="mb-3">
+        <input name="name" placeholder="Name" className="form-control" onChange={handleChange} />
+      </div>
+      <div className="mb-3">
+        <input name="email" placeholder="Email" className="form-control" onChange={handleChange} />
+      </div>
+      <div className="mb-3">
+        <select name="course" className="form-control" onChange={handleChange}>
+          <option value="">Select Course</option>
+          <option value="BCA">BCA</option>
+          <option value="BBA">BBA</option>
+        </select>
+      </div>
+      <div className="mb-3">
+        <textarea name="address" placeholder="Address" className="form-control" onChange={handleChange} />
+      </div>
+      <div className="mb-3">
+        <input name="mobile" placeholder="Mobile" className="form-control" onChange={handleChange} />
+      </div>
+      <div className="mb-3">
+        <input type="date" name="dob" className="form-control" onChange={handleChange} />
+      </div>
+      <button className="btn btn-primary" onClick={handleSubmit}>Add</button>
+    </div>
+  );
+};
+
+export default StudentForm;
+
+================================================================================================
+
+StudentList.js
+->
+
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+
+const StudentList = () => {
+  const [students, setStudents] = useState([]);
+
+  const fetchStudents = async () => {
+    const res = await axios.get("http://localhost:3001/students");
+    setStudents(res.data);
+  };
+
+  const deleteStudent = async (id) => {
+    await axios.delete(`http://localhost:3001/students/${id}`);
+    fetchStudents();
+  };
+
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  return (
+    <div className="container mt-4">
+      <h3>All Students</h3>
+      <table className="table table-bordered">
+        <thead>
+          <tr>
+            <th>ID</th><th>Name</th><th>Email</th><th>Course</th><th>Address</th><th>Mobile</th><th>DOB</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {students.map((s) => (
+            <tr key={s.id}>
+              <td>{s.id}</td><td>{s.name}</td><td>{s.email}</td><td>{s.course}</td>
+              <td>{s.address}</td><td>{s.mobile}</td><td>{s.dob}</td>
+              <td>
+                <button className="btn btn-danger btn-sm" onClick={() => deleteStudent(s.id)}>Delete</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+export default StudentList;
+
+
+=========================================================================
+===========================================================================
+
+
+Backend->
+
+commands for terminal->
+mkdir student-crud-backend
+cd student-crud-backend
+npm init -y
+npm install express mysql cors body-parser
+===============================================================
+
+make server.js and add code
+->
+
+const express = require('express');
+const cors = require('cors');
+const mysql = require('mysql');
+const bodyParser = require('body-parser');
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+
+const db = mysql.createConnection({
+  host: 'localhost',
+  user: 'root',
+  password: '', // update if needed
+  database: 'studentdb'
+});
+
+db.connect(err => {
+  if (err) console.log(err);
+  else console.log('MySQL Connected...');
+});
+
+// CREATE
+app.post('/students', (req, res) => {
+  const { name, email, course, address, mobile, dob } = req.body;
+
+  // Basic validation
+  if (!name || name.length < 3 || !/^[A-Za-z\s]+$/.test(name)) {
+    return res.status(400).send("Invalid name");
+  }
+  if (!email || !email.includes('@')) {
+    return res.status(400).send("Invalid email");
+  }
+  const sql = "INSERT INTO students (name, email, course, address, mobile, dob) VALUES (?, ?, ?, ?, ?, ?)";
+  db.query(sql, [name, email, course, address, mobile, dob], (err, result) => {
+    if (err) return res.status(500).send(err);
+    res.send("Student added");
+  });
+});
+
+// READ
+app.get('/students', (req, res) => {
+  db.query("SELECT * FROM students", (err, results) => {
+    if (err) return res.status(500).send(err);
+    res.json(results);
+  });
+});
+
+// UPDATE
+app.put('/students/:id', (req, res) => {
+  const { name, email, course, address, mobile, dob } = req.body;
+  const { id } = req.params;
+  const sql = "UPDATE students SET name=?, email=?, course=?, address=?, mobile=?, dob=? WHERE id=?";
+  db.query(sql, [name, email, course, address, mobile, dob, id], (err) => {
+    if (err) return res.status(500).send(err);
+    res.send("Student updated");
+  });
+});
+
+// DELETE
+app.delete('/students/:id', (req, res) => {
+  const sql = "DELETE FROM students WHERE id=?";
+  db.query(sql, [req.params.id], (err) => {
+    if (err) return res.status(500).send(err);
+    res.send("Student deleted");
+  });
+});
+
+app.listen(3001, () => console.log('Server running on port 3001'));
+
+
+=============================================================================
+=============================================================================
+
+Database
+->
+CREATE DATABASE studentdb;
+
+USE studentdb;
+
+CREATE TABLE students (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100),
+  email VARCHAR(100),
+  course VARCHAR(50),
+  address TEXT,
+  mobile VARCHAR(15),
+  dob DATE
+);
+
+=====================================
+In case tere is employee 
+
+Daatabase is CREATE TABLE employees (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100),
+  email VARCHAR(100),
+  department VARCHAR(100),
+  address TEXT,
+  mobile VARCHAR(15),
+  dob DATE,
+  salary DECIMAL(10, 2)
+);
+
+
+
+=============================================================================================
+
+
+
+Postman
+->
+🔹 Add Student (POST)
+	Method: POST
+	URL: http://localhost:3001/students
+	[Body (raw JSON)]:
+
+	json
+	{
+	  "name": "Ravi",
+	  "email": "ravi@example.com",
+	  "course": "BCA",
+	  "address": "Pune, MH",
+	  "mobile": "9876543210",
+	  "dob": "2000-05-15"
+	}
+
+🔹 Get All Students (GET)
+	Method: GET
+	URL: http://localhost:3001/students
+
+🔹 Update Student (PUT)
+	Method: PUT
+	URL: http://localhost:3001/students/1
+	Body (raw JSON):
+
+	json
+	{
+  		"name": "Ravi Kumar",
+  		"email": "ravi.kumar@example.com",
+  		"course": "BCA",
+  		"address": "Updated Address",
+  		"mobile": "9876543210",
+  		"dob": "2000-05-15"
+	}
+
+🔹 Delete Student (DELETE)
+	Method: DELETE
+	URL: http://localhost:3001/students/1
+
+
