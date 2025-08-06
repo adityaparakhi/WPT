@@ -150,6 +150,41 @@ app.delete("/api/students/:id", authenticateToken, (req, res) => {
 
 app.listen(5000, () => console.log("Server running on port 5000"));
 
+
+
+==============================
+FRONTEND: App.js
+==============================
+import React, { useState } from "react";
+import Register from "./components/register";
+import Login from "./components/login";
+import StudentList from "./components/studentList";
+import 'bootstrap/dist/css/bootstrap.min.css';
+
+function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem("token"));
+
+  return (
+    <div>
+      {!isLoggedIn ? (
+        <>
+          <Register />
+          <hr />
+          <Login onLogin={() => setIsLoggedIn(true)} />
+        </>
+      ) : (
+        <StudentList />
+      )}
+    </div>
+  );
+}
+
+export default App;
+
+
+
+
+
 ==============================
 🧑 FRONTEND: Register.jsx
 ==============================
