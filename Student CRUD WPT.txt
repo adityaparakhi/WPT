@@ -1,0 +1,242 @@
+
+==============================
+📦 PACKAGE INSTALLATION (BACKEND)
+==============================
+cd backend
+npm init -y
+npm install express mysql2 bcrypt cors dotenv
+npm install --save-dev nodemon
+
+==============================
+📦 PACKAGE INSTALLATION (FRONTEND)
+==============================
+npx create-react-app client
+cd client
+npm install axios react-router-dom bootstrap
+
+==============================
+📁 FOLDER STRUCTURE
+==============================
+
+ProjectFolder/
+├── backend/
+│   ├── server.js
+│   ├── db.js
+│   ├── .env
+│   └── package.json
+└── client/
+    ├── src/
+    │   ├── components/
+    │   │   ├── Register.jsx
+    │   │   ├── Login.jsx
+    │   │   └── StudentList.jsx
+    │   ├── App.js
+    │   ├── index.js
+    └── package.json
+
+==============================
+🖥️ BACKEND: server.js
+==============================
+const express = require("express");
+const mysql = require("mysql2");
+const bcrypt = require("bcrypt");
+const cors = require("cors");
+const jwt = require("jsonwebtoken");
+require("dotenv").config();
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+const db = mysql.createConnection({
+  host: "localhost",
+  user: "root",
+  password: "",
+  database: "your_db_name"
+});
+
+// Registration
+app.post("/api/auth/register", async (req, res) => {
+  const { username, email, password } = req.body;
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const sql = "INSERT INTO login (username, email, password) VALUES (?, ?, ?)";
+  db.query(sql, [username, email, hashedPassword], (err, result) => {
+    if (err) return res.status(500).json(err);
+    res.json({ message: "User registered successfully" });
+  });
+});
+
+// Login
+app.post("/api/auth/login", (req, res) => {
+  const { username, password } = req.body;
+  const sql = "SELECT * FROM login WHERE username = ?";
+  db.query(sql, [username], async (err, results) => {
+    if (err || results.length === 0) return res.status(401).json({ error: "Invalid" });
+    const valid = await bcrypt.compare(password, results[0].password);
+    if (!valid) return res.status(401).json({ error: "Invalid" });
+    const token = jwt.sign({ id: results[0].id }, "secretkey");
+    res.json({ token });
+  });
+});
+
+// Middleware
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+  if (!token) return res.sendStatus(401);
+  jwt.verify(token, "secretkey", (err, user) => {
+    if (err) return res.sendStatus(403);
+    next();
+  });
+}
+
+// Get all students
+app.get("/api/students", authenticateToken, (req, res) => {
+  const sql = `
+    SELECT s.id, s.name, s.dob, s.mobileNo, s.email, c.name as course
+    FROM student s JOIN courses c ON s.course_id = c.id
+  `;
+  db.query(sql, (err, results) => {
+    if (err) return res.status(500).json(err);
+    res.json(results);
+  });
+});
+
+// Delete student
+app.delete("/api/students/:id", authenticateToken, (req, res) => {
+  db.query("DELETE FROM student WHERE id = ?", [req.params.id], (err) => {
+    if (err) return res.status(500).json(err);
+    res.json({ message: "Student deleted" });
+  });
+});
+
+app.listen(5000, () => console.log("Server running on port 5000"));
+
+==============================
+🧑 FRONTEND: Register.jsx
+==============================
+import React, { useState } from "react";
+import axios from "axios";
+
+export default function Register() {
+  const [form, setForm] = useState({ username: "", email: "", password: "" });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post("http://localhost:5000/api/auth/register", form);
+      alert("Registered successfully");
+    } catch (err) {
+      alert("Registration failed");
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input type="text" placeholder="Username" onChange={(e) => setForm({ ...form, username: e.target.value })} />
+      <input type="email" placeholder="Email" onChange={(e) => setForm({ ...form, email: e.target.value })} />
+      <input type="password" placeholder="Password" onChange={(e) => setForm({ ...form, password: e.target.value })} />
+      <button type="submit">Register</button>
+    </form>
+  );
+}
+
+==============================
+🔐 FRONTEND: Login.jsx
+==============================
+import React, { useState } from "react";
+import axios from "axios";
+
+export default function Login({ setToken }) {
+  const [form, setForm] = useState({ username: "", password: "" });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await axios.post("http://localhost:5000/api/auth/login", form);
+      setToken(res.data.token);
+    } catch {
+      alert("Login failed");
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input type="text" placeholder="Username" onChange={(e) => setForm({ ...form, username: e.target.value })} />
+      <input type="password" placeholder="Password" onChange={(e) => setForm({ ...form, password: e.target.value })} />
+      <button type="submit">Login</button>
+    </form>
+  );
+}
+
+==============================
+📋 FRONTEND: StudentList.jsx
+==============================
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+
+export default function StudentList({ token }) {
+  const [students, setStudents] = useState([]);
+
+  useEffect(() => {
+    axios.get("http://localhost:5000/api/students", {
+      headers: { Authorization: "Bearer " + token }
+    }).then(res => setStudents(res.data));
+  }, [token]);
+
+  const deleteStudent = (id) => {
+    axios.delete(`http://localhost:5000/api/students/${id}`, {
+      headers: { Authorization: "Bearer " + token }
+    }).then(() => {
+      setStudents(students.filter(s => s.id !== id));
+    });
+  };
+
+  return (
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th><th>DOB</th><th>Mobile</th><th>Email</th><th>Course</th><th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {students.map(s => (
+          <tr key={s.id}>
+            <td>{s.name}</td><td>{s.dob}</td><td>{s.mobileNo}</td><td>{s.email}</td><td>{s.course}</td>
+            <td><button onClick={() => deleteStudent(s.id)}>Delete</button></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+==============================
+📬 POSTMAN USAGE
+==============================
+
+1️⃣ REGISTER
+- POST http://localhost:5000/api/auth/register
+- Body (JSON):
+{
+  "username": "admin1",
+  "email": "admin1@example.com",
+  "password": "admin@123"
+}
+
+2️⃣ LOGIN
+- POST http://localhost:5000/api/auth/login
+- Body (JSON):
+{
+  "username": "admin1",
+  "password": "admin@123"
+}
+✅ Get JWT Token from response.
+
+3️⃣ GET STUDENTS (Protected)
+- GET http://localhost:5000/api/students
+- Headers → Authorization: Bearer <token>
+
+4️⃣ DELETE STUDENT
+- DELETE http://localhost:5000/api/students/1
+- Headers → Authorization: Bearer <token>
