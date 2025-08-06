@@ -1,0 +1,247 @@
+=============================
+Workbench
+=============================
+CREATE DATABASE shopping_cart;
+USE shopping_cart;
+
+CREATE TABLE products (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100),
+    description TEXT,
+    price DECIMAL(10,2),
+    quantity INT
+);
+
+INSERT INTO products (name, description, price, quantity) VALUES
+('T-shirt', 'Cotton white t-shirt', 499.00, 50),
+('Jeans', 'Blue denim jeans', 1299.00, 30),
+('Sneakers', 'Running shoes', 2199.00, 20),
+('Cap', 'Baseball cap', 299.00, 80),
+('Backpack', 'School backpack', 999.00, 40);
+
+
+
+
+
+==============================
+📦 PACKAGE INSTALLATION (BACKEND)
+==============================
+cd backend
+npm init -y
+npm install express mysql2 cors
+
+==============================
+📦 PACKAGE INSTALLATION (FRONTEND)
+==============================
+npx create-react-app .
+npm install axios bootstrap
+
+==============================
+📁 FOLDER STRUCTURE
+==============================
+
+ProjectFolder/
+├── backend/
+│   ├── server.js
+│   ├── db.js
+│   ├── .env
+│   └── package.json
+└── frontend/
+    ├── src/
+    │   ├── components/
+    │   │   ├── Register.jsx
+    │   │   ├── Login.jsx
+    │   │   └── StudentList.jsx
+    │   ├── App.js
+    │   ├── index.js
+    └── package.json
+
+
+
+
+==============================
+🖥️ BACKEND: server.js
+==============================
+const express = require("express");
+const mysql = require("mysql2");
+const cors = require("cors");
+
+const app = express();
+const port = 5000;
+
+app.use(cors());
+app.use(express.json());
+
+const db = mysql.createConnection({
+    host: "localhost",
+    user: "root",
+    password: "", // or your MySQL password
+    database: "shopping_cart"
+});
+
+db.connect((err) => {
+    if (err) throw err;
+    console.log("Connected to MySQL");
+});
+
+// GET all products
+app.get("/products", (req, res) => {
+    db.query("SELECT * FROM products", (err, result) => {
+        if (err) return res.status(500).json({ error: err });
+        res.json(result);
+    });
+});
+
+// GET one product by ID
+app.get("/products/:id", (req, res) => {
+    const { id } = req.params;
+    db.query("SELECT * FROM products WHERE id = ?", [id], (err, result) => {
+        if (err) return res.status(500).json({ error: err });
+        res.json(result[0]);
+    });
+});
+
+// POST add a product
+app.post("/products", (req, res) => {
+    const { name, description, price, quantity } = req.body;
+    db.query(
+        "INSERT INTO products (name, description, price, quantity) VALUES (?, ?, ?, ?)",
+        [name, description, price, quantity],
+        (err, result) => {
+            if (err) return res.status(500).json({ error: err });
+            res.json({ message: "Product added", id: result.insertId });
+        }
+    );
+});
+
+app.listen(port, () => {
+    console.log(`Server running on http://localhost:${port}`);
+});
+
+
+
+==============================
+frontend index.js
+==============================
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+import 'bootstrap/dist/css/bootstrap.min.css';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+
+
+
+==============================
+Frontend App.js
+==============================
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import ProductCard from './components/ProductCard';
+
+function App() {
+    const [products, setProducts] = useState([]);
+
+    useEffect(() => {
+        axios.get("http://localhost:5000/products")
+            .then(res => setProducts(res.data))
+            .catch(err => console.error(err));
+    }, []);
+
+    return (
+        <div className="container my-4">
+            <h1 className="text-center mb-4">🛒 Shopping Cart</h1>
+            <div className="row">
+                {products.map(product => (
+                    <ProductCard key={product.id} product={product} />
+                ))}
+            </div>
+        </div>
+    );
+}
+
+export default App;
+
+
+
+
+
+==============================
+🧑 FRONTEND: ProductCard.jsx
+==============================
+// src/components/ProductCard.jsx
+import React from 'react';
+
+const ProductCard = ({ product }) => {
+    return (
+        <div className="col-md-4 mb-4">
+            <div className="card h-100 shadow-sm">
+                <div className="card-body d-flex flex-column">
+                    <h5 className="card-title">{product.name}</h5>
+                    <p className="card-text text-muted">{product.description}</p>
+                    <p className="card-text fw-bold">₹{product.price}</p>
+                    <p className="card-text">Available: {product.quantity}</p>
+                    <button className="btn btn-primary mt-auto">Add to Cart</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default ProductCard;
+
+
+==============================
+📬 POSTMAN USAGE
+==============================
+
+✅ 1. Get All Products
+Method: GET
+
+URL: http://localhost:5000/products
+
+Hit Send
+
+✔️ Returns JSON list of all products
+
+✅ 2. Get Product by ID
+Method: GET
+
+URL: http://localhost:5000/products/1
+
+Hit Send
+
+✔️ Returns product with ID 1
+
+✅ 3. Add New Product
+Method: POST
+
+URL: http://localhost:5000/products
+
+Headers:
+Content-Type: application/json
+
+Body → raw → JSON:
+
+json
+Copy
+Edit
+{
+  "name": "Sunglasses",
+  "description": "UV protected sunglasses",
+  "price": 799,
+  "quantity": 25
+}
+Hit Send
+
+✔️ Returns:
+
+json
+Copy
+Edit
+{
+  "message": "Product added",
+  "id": 6
+}
